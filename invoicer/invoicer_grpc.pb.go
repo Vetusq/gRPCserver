@@ -4,7 +4,7 @@
 // - protoc             v3.12.4
 // source: invoicer.proto
 
-package compiled_proto
+package invoicer
 
 import (
 	context "context"

@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/Vetusq/gRPCserver/compiled_proto";
+option go_package = "github.com/Vetusq/gRPCserver/invoicer";
 
 service Greeter {
     rpc GetBalance (RequestWalletInfo) returns (ResponceBalanceNonce) {}
@@ -10,6 +10,6 @@ service Greeter {
   }
   
   message ResponceBalanceNonce {
-    float balance = 1;
-    float nonce = 2;
+    double balance = 1;
+    uint64 nonce = 2;
   }
