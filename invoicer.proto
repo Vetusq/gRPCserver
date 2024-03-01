@@ -10,6 +10,6 @@ service Greeter {
   }
   
   message ResponceBalanceNonce {
-    double balance = 1;
+    int64 balance = 1;
     uint64 nonce = 2;
   }
