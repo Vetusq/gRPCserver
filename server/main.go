@@ -44,7 +44,6 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	tokenSmartContract := "0x081Ec4c0e30159C8259BAD8F4887f83010a681DC"
 	tokenAddress := common.HexToAddress(tokenSmartContract)
 
-	NewERC20(tokenAddress, client)
 	abi, err := NewERC20(tokenAddress, client)
 	if err != nil {
 		log.Printf("Failed to connect abi %s", err)
@@ -55,7 +54,9 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	if err != nil {
 		log.Fatalf("Failed to get balance %s", err)
 	}
+	fmt.Println(balance)
 	balanceString := balance.String()
+	fmt.Println(balance)
 	return &invoicer.ResponceBalanceNonce{
 		Balance: balanceString,
 		Nonce:   nonce,
@@ -75,4 +76,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to serve: %s", err)
 	}
+
 }
