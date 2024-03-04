@@ -18,8 +18,10 @@ type MyInvoicerServer struct {
 }
 
 func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestWalletInfo) (*invoicer.ResponceBalanceNonce, error) {
+
 	client, err := ethclient.Dial("https://polygon-rpc.com")
 	if err != nil {
+		log.Println("failed to connect to client: %s", err)
 		return nil, fmt.Errorf("failed to connect to client: %w", err)
 	}
 
@@ -27,14 +29,23 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
 
 	if !re.MatchString(walletAddress) {
-		log.Fatalf("Address not valid %s", err)
+		log.Println("Wallet address not valid: %s", err)
+		return nil, fmt.Errorf("Wallet address not valid: %w", err)
 	}
 
 	account := common.HexToAddress(walletAddress)
 	nonce, err := client.NonceAt(ctx, account, nil)
 	if err != nil {
-		log.Fatalf("Failed to get nonce %s", err)
+		log.Println("Failed to get nonce %s", err)
+		return nil, fmt.Errorf("Failed to get nonce %w", err)
 	}
+
+	abi, err := NewERC20(account, client)
+	if err != nil {
+		log.Println("Failed to connect abi %s", err)
+		return nil, fmt.Errorf("Failed to connect abi %w", err)
+	}
+	abi.BalanceOf()
 
 	balanceAt, err := client.BalanceAt(ctx, account, nil)
 	if err != nil {
