@@ -24,7 +24,7 @@ func main() {
 	walletAddress := "0xef89e95c889f349f8ae3c226d87c94a96f6a9bfc"
 
 	req := &pb.RequestWalletInfo{
-		Wallet: walletAddress,
+		Address: walletAddress,
 	}
 
 	resp, err := client.GetBalance(context.Background(), req)
@@ -37,6 +37,6 @@ func main() {
 	fbalance.SetString(ethBalanceBigInt.String())
 	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 
-	fmt.Printf("Balance: %.5f ETH\n", ethValue)
+	fmt.Printf("Balance: %.5f matic \n", ethValue)
 	fmt.Printf("Nonce: %d\n", resp.Nonce)
 }

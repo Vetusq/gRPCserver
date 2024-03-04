@@ -6,7 +6,7 @@ service Greeter {
   }
   
   message RequestWalletInfo {
-    string wallet = 1;
+    string address = 1;
   }
   
   message ResponceBalanceNonce {

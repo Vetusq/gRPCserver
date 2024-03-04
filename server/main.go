@@ -18,12 +18,12 @@ type MyInvoicerServer struct {
 }
 
 func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestWalletInfo) (*invoicer.ResponceBalanceNonce, error) {
-	client, err := ethclient.Dial("https://cloudflare-eth.com")
+	client, err := ethclient.Dial("https://polygon-rpc.com")
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to client: %w", err)
 	}
 
-	walletAddress := req.Wallet
+	walletAddress := req.Address
 	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
 
 	if !re.MatchString(walletAddress) {
