@@ -22,24 +22,34 @@ func main() {
 	client := pb.NewGreeterClient(conn)
 
 	walletAddress := "0x00091B44f98a9DfBaF12CfF719bbA49EC41e0000"
-	// tokenAddress := "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
+	tokenAddress := "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
 
 	req := &pb.RequestWalletInfo{
 		Address: walletAddress,
 	}
-	// req := pb.RequestWalletTokenInfo{
-	// 	Address:      walletAddress,
-	// 	Tokenaddress: tokenAddress,
-	// }
+
 	resp, err := client.GetBalance(context.Background(), req)
 	if err != nil {
 		log.Fatalf("Error calling GetBalance: %s", err)
 	}
 
+	reqTokenBalance := &pb.RequestWalletTokenInfo{
+		Address:      walletAddress,
+		Tokenaddress: tokenAddress,
+	}
+
+	respTokenBalance, err := client.StreamGetBalance(context.Background(), reqTokenBalance)
+	if err != nil {
+		log.Fatalf("Error calling GetBalance: %s", err)
+	}
+
+	//first requsest output
 	fbalance := new(big.Float)
 	fbalance.SetString(resp.Balance)
 	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 
 	fmt.Printf("Balance: %.5f de \n", ethValue)
 	fmt.Printf("Nonce: %d\n", resp.Nonce)
+
+	//second reuqest output
 }

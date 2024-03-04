@@ -18,6 +18,46 @@ type MyInvoicerServer struct {
 	invoicer.UnimplementedGreeterServer
 }
 
+func (s MyInvoicerServer) StreamGetBalance(stream *invoicer.RequestWalletTokenInfo) error {
+
+	client, err := ethclient.Dial("https://polygon-rpc.com")
+	if err != nil {
+		log.Printf("failed to connect to client: %s", err)
+		return nil, fmt.Errorf("failed to connect to client: %w", err)
+	}
+
+	walletAddress := reqWalletreqTokenBalance.Balance
+	tokenSmartContract := reqTokenBalance.Tokenaddress
+
+	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
+
+	if !re.MatchString(walletAddress) {
+		log.Printf("Wallet address not valid: %s", err)
+		return nil, fmt.Errorf("wallet address not valid: %w", err)
+	}
+
+	account := common.HexToAddress(walletAddress)
+
+	tokenAddress := common.HexToAddress(tokenSmartContract)
+
+	abi, err := NewERC20(tokenAddress, client)
+	if err != nil {
+		log.Printf("Failed to connect abi %s", err)
+		return nil, fmt.Errorf("failed to connect abi %s", err)
+	}
+
+	balance, err := abi.BalanceOf(&bind.CallOpts{}, account)
+	if err != nil {
+		log.Fatalf("Failed to get balance %s", err)
+	}
+	fmt.Println(balance)
+	balanceString := balance.String()
+	fmt.Println(balance)
+	return &invoicer.RequestWalletTokenInfo{
+		Balance: balanceString,
+	}, nil
+}
+
 func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestWalletInfo) (*invoicer.ResponceBalanceNonce, error) {
 
 	client, err := ethclient.Dial("https://polygon-rpc.com")
