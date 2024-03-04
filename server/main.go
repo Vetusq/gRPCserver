@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/Vetusq/gRPCserver/invoicer"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 
 	client, err := ethclient.Dial("https://polygon-rpc.com")
 	if err != nil {
-		log.Println("failed to connect to client: %s", err)
+		log.Printf("failed to connect to client: %s", err)
 		return nil, fmt.Errorf("failed to connect to client: %w", err)
 	}
 
@@ -29,32 +30,34 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
 
 	if !re.MatchString(walletAddress) {
-		log.Println("Wallet address not valid: %s", err)
-		return nil, fmt.Errorf("Wallet address not valid: %w", err)
+		log.Printf("Wallet address not valid: %s", err)
+		return nil, fmt.Errorf("wallet address not valid: %w", err)
 	}
 
 	account := common.HexToAddress(walletAddress)
 	nonce, err := client.NonceAt(ctx, account, nil)
 	if err != nil {
-		log.Println("Failed to get nonce %s", err)
-		return nil, fmt.Errorf("Failed to get nonce %w", err)
+		log.Printf("Failed to get nonce %s", err)
+		return nil, fmt.Errorf("failed to get nonce %w", err)
 	}
 
-	abi, err := NewERC20(account, client)
+	tokenSmartContract := "0x081Ec4c0e30159C8259BAD8F4887f83010a681DC"
+	tokenAddress := common.HexToAddress(tokenSmartContract)
+
+	NewERC20(tokenAddress, client)
+	abi, err := NewERC20(tokenAddress, client)
 	if err != nil {
-		log.Println("Failed to connect abi %s", err)
-		return nil, fmt.Errorf("Failed to connect abi %w", err)
+		log.Printf("Failed to connect abi %s", err)
+		return nil, fmt.Errorf("failed to connect abi %s", err)
 	}
-	abi.BalanceOf()
 
-	balanceAt, err := client.BalanceAt(ctx, account, nil)
+	balance, err := abi.BalanceOf(&bind.CallOpts{}, account)
 	if err != nil {
 		log.Fatalf("Failed to get balance %s", err)
 	}
-	balanceInt := balanceAt.Int64()
-
+	balanceString := balance.String()
 	return &invoicer.ResponceBalanceNonce{
-		Balance: balanceInt,
+		Balance: balanceString,
 		Nonce:   nonce,
 	}, nil
 }

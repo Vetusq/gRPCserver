@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GreeterClient interface {
 	GetBalance(ctx context.Context, in *RequestWalletInfo, opts ...grpc.CallOption) (*ResponceBalanceNonce, error)
+	StreamGetBalance(ctx context.Context, opts ...grpc.CallOption) (Greeter_StreamGetBalanceClient, error)
 }
 
 type greeterClient struct {
@@ -42,11 +43,43 @@ func (c *greeterClient) GetBalance(ctx context.Context, in *RequestWalletInfo, o
 	return out, nil
 }
 
+func (c *greeterClient) StreamGetBalance(ctx context.Context, opts ...grpc.CallOption) (Greeter_StreamGetBalanceClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Greeter_ServiceDesc.Streams[0], "/Greeter/StreamGetBalance", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &greeterStreamGetBalanceClient{stream}
+	return x, nil
+}
+
+type Greeter_StreamGetBalanceClient interface {
+	Send(*RequestWalletInfo) error
+	Recv() (*ResponceBalanceNonce, error)
+	grpc.ClientStream
+}
+
+type greeterStreamGetBalanceClient struct {
+	grpc.ClientStream
+}
+
+func (x *greeterStreamGetBalanceClient) Send(m *RequestWalletInfo) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *greeterStreamGetBalanceClient) Recv() (*ResponceBalanceNonce, error) {
+	m := new(ResponceBalanceNonce)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // GreeterServer is the server API for Greeter service.
 // All implementations must embed UnimplementedGreeterServer
 // for forward compatibility
 type GreeterServer interface {
 	GetBalance(context.Context, *RequestWalletInfo) (*ResponceBalanceNonce, error)
+	StreamGetBalance(Greeter_StreamGetBalanceServer) error
 	mustEmbedUnimplementedGreeterServer()
 }
 
@@ -56,6 +89,9 @@ type UnimplementedGreeterServer struct {
 
 func (UnimplementedGreeterServer) GetBalance(context.Context, *RequestWalletInfo) (*ResponceBalanceNonce, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBalance not implemented")
+}
+func (UnimplementedGreeterServer) StreamGetBalance(Greeter_StreamGetBalanceServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamGetBalance not implemented")
 }
 func (UnimplementedGreeterServer) mustEmbedUnimplementedGreeterServer() {}
 
@@ -88,6 +124,32 @@ func _Greeter_GetBalance_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Greeter_StreamGetBalance_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GreeterServer).StreamGetBalance(&greeterStreamGetBalanceServer{stream})
+}
+
+type Greeter_StreamGetBalanceServer interface {
+	Send(*ResponceBalanceNonce) error
+	Recv() (*RequestWalletInfo, error)
+	grpc.ServerStream
+}
+
+type greeterStreamGetBalanceServer struct {
+	grpc.ServerStream
+}
+
+func (x *greeterStreamGetBalanceServer) Send(m *ResponceBalanceNonce) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *greeterStreamGetBalanceServer) Recv() (*RequestWalletInfo, error) {
+	m := new(RequestWalletInfo)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Greeter_ServiceDesc is the grpc.ServiceDesc for Greeter service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +162,13 @@ var Greeter_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Greeter_GetBalance_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamGetBalance",
+			Handler:       _Greeter_StreamGetBalance_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "invoicer.proto",
 }
