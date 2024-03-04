@@ -3,9 +3,18 @@ option go_package = "github.com/Vetusq/gRPCserver/invoicer";
 
 service Greeter {
     rpc GetBalance (RequestWalletInfo) returns (ResponceBalanceNonce) {}
-    rpc StreamGetBalance (stream RequestWalletInfo) returns (stream ResponceBalanceNonce) {}
+    rpc StreamGetBalance (stream RequestWalletTokenInfo) returns (stream ResponceBalanceNonce) {}
   }
   
+  message RequestWalletTokenInfo {
+    string address = 1;
+    string tokenaddress = 2;
+  }
+
+  message ResponceBalance{
+    string balance = 1;
+  }
+
   message RequestWalletInfo {
     string address = 1;
   }
