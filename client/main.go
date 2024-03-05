@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	pb "github.com/Vetusq/gRPCserver/invoicer"
 	"google.golang.org/grpc"
@@ -21,8 +24,6 @@ func main() {
 	defer conn.Close()
 	client := pb.NewGreeterClient(conn)
 
-	walletAddress := "0xa0006e2f7973678e60a2e445ab8353abad6854d5"
-
 	tokenAddress := []string{
 		"0x2f6f07cdcf3588944bf4c42ac74ff24bf56e7590", //stg
 		"0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", // weth
@@ -31,8 +32,37 @@ func main() {
 		"0x081Ec4c0e30159C8259BAD8F4887f83010a681DC", //De
 	}
 
+	//---------------------------------------------------------------- генерация подписи
+
+	walletAddress := []byte("0xa0006e2f7973678e60a2e445ab8353abad6854d5")
+	//адрес который я буду подписывать
+	privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	hash := crypto.Keccak256Hash(walletAddress)
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+
+	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+
+	// создаю сигнатуру которую буду передавать
+	signature, err := crypto.Sign(hash.Bytes(), privateKey) // digital signature
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//---------------------------------------------------------------- генерация подписи
+
 	req1 := &pb.RequestWalletInfo{
-		Address: walletAddress,
+		Address:        walletAddress,
+		Signature:      signature,
+		Publickeybytes: publicKeyBytes,
 	}
 	resp1, err := client.GetBalance(context.Background(), req1)
 	if err != nil {
@@ -43,6 +73,7 @@ func main() {
 	fbalance.SetString(resp1.Balance)
 	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 
+	fmt.Printf("Signature verified %v \n", resp1.VerifiedSign)
 	fmt.Printf("Balance: %.5f weth \n", ethValue)
 	fmt.Printf("Nonce: %d\n", resp1.Nonce)
 

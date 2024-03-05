@@ -7,7 +7,7 @@ service Greeter {
   }
   
   message RequestWalletTokenInfo {
-    string address = 1;
+    bytes address = 1;
     string tokenaddress = 2;
   }
 
@@ -16,10 +16,13 @@ service Greeter {
   }
 
   message RequestWalletInfo {
-    string address = 1;
+    bytes address = 1;
+    bytes signature = 2;
+    bytes publickeybytes = 3;
   }
   
   message ResponceBalanceNonce {
     string balance = 1;
     uint64 nonce = 2;
+    bool verifiedSign = 3;
   }

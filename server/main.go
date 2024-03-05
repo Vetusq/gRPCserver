@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"github.com/Vetusq/gRPCserver/invoicer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 )
@@ -42,12 +44,14 @@ func (s MyInvoicerServer) StreamGetBalance(stream invoicer.Greeter_StreamGetBala
 		tokenAddress := common.HexToAddress(req.Tokenaddress)
 		fmt.Println("Token address", tokenAddress)
 
+		walletAddressString := string(walletAddress)
+
 		re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
-		if !re.MatchString(walletAddress) {
+		if !re.MatchString(walletAddressString) {
 			log.Printf("Wallet address not valid: %s", err)
 			return fmt.Errorf("wallet address not valid")
 		}
-		account := common.HexToAddress(walletAddress)
+		account := common.HexToAddress(walletAddressString)
 
 		abi, err := NewERC20(tokenAddress, client)
 		if err != nil {
@@ -80,14 +84,19 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	}
 
 	walletAddress := req.Address
-	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
 
-	if !re.MatchString(walletAddress) {
-		log.Printf("Wallet address not valid: %s", err)
-		return nil, fmt.Errorf("wallet address not valid: %w", err)
+	hash := crypto.Keccak256Hash(walletAddress)
+
+	sigPublicKey, err := crypto.Ecrecover(hash.Bytes(), req.Signature)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	account := common.HexToAddress(walletAddress)
+	matchesSignature := bytes.Equal(sigPublicKey, req.Publickeybytes)
+	fmt.Println("Signature confirm state =", matchesSignature)
+
+	walletAddressString := string(walletAddress)
+	account := common.HexToAddress(walletAddressString)
 	nonce, err := client.NonceAt(ctx, account, nil)
 	if err != nil {
 		log.Printf("Failed to get nonce %s", err)
@@ -111,8 +120,9 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 	balanceString := balance.String()
 	fmt.Println(balance)
 	return &invoicer.ResponceBalanceNonce{
-		Balance: balanceString,
-		Nonce:   nonce,
+		Balance:      balanceString,
+		Nonce:        nonce,
+		VerifiedSign: matchesSignature,
 	}, nil
 }
 
