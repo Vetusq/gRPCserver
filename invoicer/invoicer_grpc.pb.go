@@ -54,7 +54,7 @@ func (c *greeterClient) StreamGetBalance(ctx context.Context, opts ...grpc.CallO
 
 type Greeter_StreamGetBalanceClient interface {
 	Send(*RequestWalletTokenInfo) error
-	Recv() (*ResponceBalanceNonce, error)
+	Recv() (*ResponceBalance, error)
 	grpc.ClientStream
 }
 
@@ -66,8 +66,8 @@ func (x *greeterStreamGetBalanceClient) Send(m *RequestWalletTokenInfo) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *greeterStreamGetBalanceClient) Recv() (*ResponceBalanceNonce, error) {
-	m := new(ResponceBalanceNonce)
+func (x *greeterStreamGetBalanceClient) Recv() (*ResponceBalance, error) {
+	m := new(ResponceBalance)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func _Greeter_StreamGetBalance_Handler(srv interface{}, stream grpc.ServerStream
 }
 
 type Greeter_StreamGetBalanceServer interface {
-	Send(*ResponceBalanceNonce) error
+	Send(*ResponceBalance) error
 	Recv() (*RequestWalletTokenInfo, error)
 	grpc.ServerStream
 }
@@ -138,7 +138,7 @@ type greeterStreamGetBalanceServer struct {
 	grpc.ServerStream
 }
 
-func (x *greeterStreamGetBalanceServer) Send(m *ResponceBalanceNonce) error {
+func (x *greeterStreamGetBalanceServer) Send(m *ResponceBalance) error {
 	return x.ServerStream.SendMsg(m)
 }
 

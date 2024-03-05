@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"regexp"
@@ -18,44 +19,56 @@ type MyInvoicerServer struct {
 	invoicer.UnimplementedGreeterServer
 }
 
-func (s MyInvoicerServer) StreamGetBalance(stream *invoicer.RequestWalletTokenInfo) error {
+func (s MyInvoicerServer) StreamGetBalance(stream invoicer.Greeter_StreamGetBalanceServer) error {
 
 	client, err := ethclient.Dial("https://polygon-rpc.com")
 	if err != nil {
 		log.Printf("failed to connect to client: %s", err)
-		return nil, fmt.Errorf("failed to connect to client: %w", err)
+		return fmt.Errorf("failed to connect to client: %w", err)
 	}
 
-	walletAddress := reqWalletreqTokenBalance.Balance
-	tokenSmartContract := reqTokenBalance.Tokenaddress
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			log.Printf("Failed to receive request: %v", err)
+			return err
+		}
 
-	re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
+		walletAddress := req.Address
+		fmt.Println("Addres geting on server ", walletAddress)
+		tokenAddress := common.HexToAddress(req.Tokenaddress)
+		fmt.Println("Token address", tokenAddress)
 
-	if !re.MatchString(walletAddress) {
-		log.Printf("Wallet address not valid: %s", err)
-		return nil, fmt.Errorf("wallet address not valid: %w", err)
+		re := regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
+		if !re.MatchString(walletAddress) {
+			log.Printf("Wallet address not valid: %s", err)
+			return fmt.Errorf("wallet address not valid")
+		}
+		account := common.HexToAddress(walletAddress)
+
+		abi, err := NewERC20(tokenAddress, client)
+		if err != nil {
+			log.Printf("Failed to connect abi %s", err)
+			return fmt.Errorf("failed to connect abi: %w", err)
+		}
+
+		balance, err := abi.BalanceOf(&bind.CallOpts{}, account)
+		if err != nil {
+			log.Printf("Failed to get balance %s", err)
+			return fmt.Errorf("failed to get balance: %w", err)
+		}
+
+		balanceString := balance.String()
+		fmt.Println("Balance of wallet:", balanceString)
+
+		if err := stream.Send(&invoicer.ResponceBalance{Balance: balanceString}); err != nil {
+			log.Printf("Failed to send balance update: %v", err)
+			return err
+		}
 	}
-
-	account := common.HexToAddress(walletAddress)
-
-	tokenAddress := common.HexToAddress(tokenSmartContract)
-
-	abi, err := NewERC20(tokenAddress, client)
-	if err != nil {
-		log.Printf("Failed to connect abi %s", err)
-		return nil, fmt.Errorf("failed to connect abi %s", err)
-	}
-
-	balance, err := abi.BalanceOf(&bind.CallOpts{}, account)
-	if err != nil {
-		log.Fatalf("Failed to get balance %s", err)
-	}
-	fmt.Println(balance)
-	balanceString := balance.String()
-	fmt.Println(balance)
-	return &invoicer.RequestWalletTokenInfo{
-		Balance: balanceString,
-	}, nil
 }
 
 func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestWalletInfo) (*invoicer.ResponceBalanceNonce, error) {
@@ -81,7 +94,7 @@ func (s MyInvoicerServer) GetBalance(ctx context.Context, req *invoicer.RequestW
 		return nil, fmt.Errorf("failed to get nonce %w", err)
 	}
 
-	tokenSmartContract := "0x081Ec4c0e30159C8259BAD8F4887f83010a681DC"
+	tokenSmartContract := "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"
 	tokenAddress := common.HexToAddress(tokenSmartContract)
 
 	abi, err := NewERC20(tokenAddress, client)
